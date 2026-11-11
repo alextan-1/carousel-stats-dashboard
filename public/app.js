@@ -144,7 +144,7 @@ function renderPosts(rows) {
       <td>${esc(v ? v.name : p.version || "")}</td><td class="muted label" title="${esc(p.label || "")}">${esc(p.label || "")}</td>
       <td class="num">${p.published_at ? fmt(p.views) : '<span class="muted">not live</span>'}</td><td class="num">${fmt(p.views_2d)}</td>
       <td class="num">${fmt(p.likes)}</td><td class="num">${fmt(p.saves)}</td><td class="num">${fmt(p.shares)}</td>
-      <td>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">open</a>` : ""}</td></tr>`;
+      <td class="link">${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.url)}">${esc(p.url.replace(/^https?:\/\/(www\.)?/, ""))}</a>` : '<span class="muted">not live yet</span>'}</td></tr>`;
   }).join("");
   $("posts").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
   $("pg-info").textContent = list.length ? `${start + 1}–${start + shown.length} of ${list.length} posts` : "No posts";
