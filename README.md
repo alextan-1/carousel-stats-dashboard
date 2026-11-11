@@ -13,17 +13,20 @@ once a day; post status changes show up faster.
 - Counting rule: only active or archived accounts count; warming accounts are left out
   (tick "Include warming accounts" to see them).
 
-## One-time setup (about 15 minutes)
-1. `npm install`, then `npx wrangler login` (opens Cloudflare in the browser).
-2. `npx wrangler d1 create carousel-stats` and paste the printed `database_id` into `wrangler.toml`.
-3. `npm run db:init` (creates the tables).
-4. Secrets:
-   - `npx wrangler secret put HUMANPOST_API_KEY` (the key in humanpost.env)
-   - `npx wrangler secret put INGEST_TOKEN` (any long random string)
-5. `npm run deploy`. Wrangler prints the site URL (`https://carousel-stats-dashboard.<you>.workers.dev`).
-6. Team login: Cloudflare dashboard > Zero Trust > Access > Applications > Add (self-hosted) for that
-   hostname, policy "Allow" for your team's emails. Add a second application for the path
-   `/api/ingest` with policy "Bypass" (that path checks its own token).
+## One-time setup (Cloudflare dashboard, about 10 minutes)
+1. **Database:** Storage & Databases > D1 > Create, name it `carousel-stats`. Put its Database ID in
+   `wrangler.toml` (`database_id`). The tables are created automatically on first use.
+2. **Site:** Workers & Pages > Create > Import a repository > `carousel-stats-dashboard`. Keep the
+   defaults (deploy command `npx wrangler deploy`). Every push to `main` redeploys.
+3. **Secrets:** the Worker > Settings > Variables and Secrets > add as *Secret*:
+   - `HUMANPOST_API_KEY`: the key from humanpost.env
+   - `INGEST_TOKEN`: any long random string (the PC uses it to push tags)
+4. **Team login:** Zero Trust > Access > Applications > Add (self-hosted) for the site's hostname,
+   policy "Allow" for your team's emails. Add a second application for the path `/api/ingest` with
+   policy "Bypass" (that path checks its own token).
+
+(Command-line alternative: `npx wrangler login`, `npx wrangler d1 create carousel-stats`,
+`npx wrangler secret put HUMANPOST_API_KEY`, `npx wrangler secret put INGEST_TOKEN`, `npm run deploy`.)
 
 ## Getting the tags in (and the stats, if Cloudflare can't reach HumanPost)
 On the PC, add to `humanpost.env`:
@@ -36,5 +39,5 @@ DASHBOARD_TOKEN=<the INGEST_TOKEN value>
 Tags changed on the website win over the PC's default `base` tag.
 
 ## Local preview
-`npm run db:init:local`, put `INGEST_TOKEN=test` in `.dev.vars`, `npm run dev`, then push with
+Put `INGEST_TOKEN=test` in `.dev.vars`, `npm run dev`, then push with
 `DASHBOARD_URL=http://localhost:8787 DASHBOARD_TOKEN=test`.

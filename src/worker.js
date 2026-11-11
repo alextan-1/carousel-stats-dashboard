@@ -10,6 +10,15 @@ const GROUPS = { mom: "moms", vet: "vets", truck: "truckers", stream: "streamers
 const TAG_RE = /^(moms|vets|truckers|streamers)\.[a-z0-9-]+\.\d{8}$/;
 const PER_RUN = 40; // Workers free plan allows 50 outbound requests per run
 
+import SCHEMA from "../schema.sql";
+
+// Create the tables on first use, so no manual database step is needed after deploy.
+let schemaReady = null;
+const ensureSchema = (env) =>
+  (schemaReady ??= env.DB.batch(
+    SCHEMA.replace(/--.*$/gm, "").split(";").map((q) => q.trim()).filter(Boolean).map((q) => env.DB.prepare(q))
+  ).catch((e) => { schemaReady = null; throw e; }));
+
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
@@ -159,6 +168,7 @@ export default {
     const url = new URL(req.url);
     const p = url.pathname;
     try {
+      if (p.startsWith("/api/")) await ensureSchema(env);
       if (p === "/api/data" && req.method === "GET") return json(await data(env));
       if (p === "/api/versions" && req.method === "POST") {
         const { tag, what } = await req.json();
@@ -190,6 +200,6 @@ export default {
     }
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(pull(env));
+    ctx.waitUntil(ensureSchema(env).then(() => pull(env)));
   },
 };
