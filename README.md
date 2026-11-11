@@ -7,7 +7,7 @@ once a day; post status changes show up faster.
 
 ## What's in it
 - `public/` the dashboard (group tiles, share-of-views pie, median views at 2 days by version,
-  versions table with group totals and "vs base", posts table with editable version, add-a-version form).
+  versions table with group totals and "vs base", paginated posts table; versions are read-only and come from the PC ledger).
 - `src/worker.js` API + scheduled pull. The HumanPost key is a Worker secret and never reaches the browser.
 - `schema.sql` D1 tables.
 - Counting rule: only active or archived accounts count; warming accounts are left out
