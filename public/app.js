@@ -7,7 +7,7 @@ const fmt = (n) => (n == null || n === "" || Number.isNaN(n) ? "–" : Math.roun
 const fmt1 = (n) => (n == null || Number.isNaN(n) ? "–" : n.toFixed(1));
 const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const $ = (id) => document.getElementById(id);
-let DATA = null, pie = null, bars = null, sortKey = "post_date", sortDir = -1, showAll = false;
+let DATA = null, pie = null, bars = null, sortKey = "post_date", sortDir = -1, page = 1, pageSize = 15;
 
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2500); }
 
@@ -134,7 +134,10 @@ function renderPosts(rows) {
   const cols = [["post_date", "Batch date"], ["grp", "Group"], ["username", "Account"], ["version", "Version"], ["label", "Label"],
     ["views", "Views", 1], ["views_2d", "Views at 2 days", 1], ["likes", "Likes", 1], ["saves", "Saves", 1], ["shares", "Shares", 1]];
   const head = cols.map(([k, t, n]) => `<th data-k="${k}" class="${n ? "num" : ""}">${t}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "<th>Link</th>";
-  const shown = showAll ? list : list.slice(0, 50);
+  const pages = Math.max(1, Math.ceil(list.length / pageSize));
+  page = Math.min(Math.max(1, page), pages);
+  const start = (page - 1) * pageSize;
+  const shown = list.slice(start, start + pageSize);
   const body = shown.map((p) => {
     const opts = DATA.versions.filter((v) => v.grp === p.grp).map((v) => `<option value="${v.tag}" ${v.tag === p.version ? "selected" : ""}>${v.name} (${v.vdate})</option>`).join("");
     return `<tr><td>${p.post_date || ""}</td><td><span class="dot" style="--c:${gcolor(p.grp)}"></span>${LABEL[p.grp] || p.grp}</td><td>${esc(p.username)}</td>
@@ -144,13 +147,14 @@ function renderPosts(rows) {
       <td>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">open</a>` : ""}</td></tr>`;
   }).join("");
   $("posts").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
-  $("more").hidden = list.length <= 50;
-  $("more").textContent = showAll ? "Show first 50" : `Show all ${list.length} posts`;
+  $("pg-info").textContent = list.length ? `${start + 1}–${start + shown.length} of ${list.length} posts` : "No posts";
+  $("pg-page").textContent = `Page ${page} of ${pages}`;
+  $("pg-prev").disabled = page <= 1; $("pg-next").disabled = page >= pages;
 }
 
 $("posts").addEventListener("click", (e) => {
   const th = e.target.closest("th[data-k]"); if (!th) return;
-  const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; renderPosts(filtered());
+  const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; page = 1; renderPosts(filtered());
 });
 $("posts").addEventListener("change", async (e) => {
   const sel = e.target.closest("select[data-post]"); if (!sel) return;
@@ -165,9 +169,11 @@ $("refresh").addEventListener("click", async () => {
   const r = await fetch("/api/refresh", { method: "POST" }).then((x) => x.json()).catch((e) => ({ error: e.message }));
   toast(r.error || r.skipped ? `Couldn't refresh: ${r.error || r.skipped}` : `Updated ${r.posts} posts`); load();
 });
-["f-group", "f-from", "f-to", "f-warming"].forEach((id) => $(id).addEventListener("change", render));
-$("more").addEventListener("click", () => { showAll = !showAll; renderPosts(filtered()); });
-$("f-search").addEventListener("input", () => renderPosts(filtered()));
+["f-group", "f-from", "f-to", "f-warming"].forEach((id) => $(id).addEventListener("change", () => { page = 1; render(); }));
+$("pg-prev").addEventListener("click", () => { page--; renderPosts(filtered()); });
+$("pg-next").addEventListener("click", () => { page++; renderPosts(filtered()); });
+$("pg-size").addEventListener("change", (e) => { pageSize = +e.target.value; page = 1; renderPosts(filtered()); });
+$("f-search").addEventListener("input", () => { page = 1; renderPosts(filtered()); });
 
 for (const g of GROUPS) { $("f-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); }
 const darkMQ = window.matchMedia("(prefers-color-scheme: dark)");

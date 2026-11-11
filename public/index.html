@@ -60,7 +60,17 @@
   </div>
   <p class="hint">Change a post's version from the dropdown. Click a column header to sort.</p>
   <div class="table-wrap"><table id="posts"></table></div>
-  <button type="button" id="more" class="more" hidden></button>
+  <nav class="pager" aria-label="Posts pages">
+    <label class="check">Rows per page
+      <select id="pg-size"><option value="15" selected>15</option><option value="25">25</option><option value="50">50</option></select>
+    </label>
+    <span class="muted" id="pg-info"></span>
+    <span class="pg-btns">
+      <button type="button" id="pg-prev" aria-label="Previous page">‹ Prev</button>
+      <span id="pg-page"></span>
+      <button type="button" id="pg-next" aria-label="Next page">Next ›</button>
+    </span>
+  </nav>
 </section>
 
 <p class="toast" id="toast" role="status"></p>

@@ -75,4 +75,6 @@ td select { padding: 3px 6px; font-size: 13px; }
 .toast.show { opacity: 1; }
 td.what { white-space: normal; min-width: 220px; max-width: 340px; }
 td.label { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
-.more { margin-top: 10px; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
+.pager .pg-btns { display: inline-flex; align-items: center; gap: 10px; }
+.pager button:disabled { opacity: .45; cursor: default; border-color: var(--line); }
