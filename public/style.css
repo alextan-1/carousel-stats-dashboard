@@ -74,7 +74,9 @@ td select { padding: 3px 6px; font-size: 13px; }
   padding: 8px 14px; border-radius: 8px; opacity: 0; transition: opacity .2s; pointer-events: none; margin: 0; }
 .toast.show { opacity: 1; }
 td.what { white-space: normal; min-width: 220px; max-width: 340px; }
-td.link { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+td.link { text-align: center; }
+td.link a { display: inline-flex; padding: 4px; border-radius: 6px; color: var(--accent); }
+td.link a:hover { background: var(--line); }
 td.label { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
 .pager .pg-btns { display: inline-flex; align-items: center; gap: 10px; }

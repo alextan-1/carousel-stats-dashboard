@@ -127,6 +127,7 @@ function renderBars(rows) {
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+const LINK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 function renderPosts(rows) {
   const q = $("f-search").value.toLowerCase();
   const list = rows.filter((p) => !q || [p.username, p.label, p.version, p.batch].join(" ").toLowerCase().includes(q))
@@ -144,7 +145,7 @@ function renderPosts(rows) {
       <td>${esc(v ? v.name : p.version || "")}</td><td class="muted label" title="${esc(p.label || "")}">${esc(p.label || "")}</td>
       <td class="num">${p.published_at ? fmt(p.views) : '<span class="muted">not live</span>'}</td><td class="num">${fmt(p.views_2d)}</td>
       <td class="num">${fmt(p.likes)}</td><td class="num">${fmt(p.saves)}</td><td class="num">${fmt(p.shares)}</td>
-      <td class="link">${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.url)}">${esc(p.url.replace(/^https?:\/\/(www\.)?/, ""))}</a>` : '<span class="muted">not live yet</span>'}</td></tr>`;
+      <td class="link">${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" title="Open on TikTok" aria-label="Open post on TikTok">${LINK_ICON}</a>` : '<span class="muted" title="Not live yet">–</span>'}</td></tr>`;
   }).join("");
   $("posts").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
   $("pg-info").textContent = list.length ? `${start + 1}–${start + shown.length} of ${list.length} posts` : "No posts";
