@@ -45,7 +45,7 @@ function summarize(rows) {
 function render() {
   const m = DATA.meta || {};
   $("updated").textContent = m.last_pull
-    ? `Last pulled ${new Date(m.last_pull).toLocaleString()}. HumanPost refreshes views about once a day.`
+    ? `Last pulled ${new Date(m.last_pull).toLocaleString()}. Views refresh about once a day.`
     : "No stats pulled yet.";
   const rows = filtered();
   renderTiles(rows); renderPie(rows); renderVersions(rows); renderBars(rows); renderPosts(rows);
