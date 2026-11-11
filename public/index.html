@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Carousel Stats</title>
 <link rel="stylesheet" href="style.css">
+<script>
+  // Apply the saved theme before the page paints, so it never flashes the wrong one.
+  try { const t = localStorage.getItem("theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -13,7 +17,14 @@
     <h1>Carousel Stats</h1>
     <p class="sub" id="updated">Loading…</p>
   </div>
-  <button id="refresh" type="button">Refresh from HumanPost</button>
+  <div class="head-actions">
+    <label class="switch" for="theme-toggle">
+      <input type="checkbox" id="theme-toggle" role="switch">
+      <span class="track" aria-hidden="true"></span>
+      Dark mode
+    </label>
+    <button id="refresh" type="button">Refresh from HumanPost</button>
+  </div>
 </header>
 
 <section class="filters" aria-label="Filters">

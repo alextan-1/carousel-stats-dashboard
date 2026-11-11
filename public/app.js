@@ -187,6 +187,15 @@ $("more").addEventListener("click", () => { showAll = !showAll; renderPosts(filt
 $("f-search").addEventListener("input", () => renderPosts(filtered()));
 
 for (const g of GROUPS) { $("f-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); $("v-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); }
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+const darkMQ = window.matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : darkMQ.matches;
+$("theme-toggle").checked = isDark();
+$("theme-toggle").addEventListener("change", (e) => {
+  const t = e.target.checked ? "dark" : "light";
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("theme", t); } catch (err) {}
+  render(); // redraw charts with the new colors
+});
+darkMQ.addEventListener("change", () => { $("theme-toggle").checked = isDark(); render(); });
 load();
 setInterval(load, 5 * 60 * 1000); // live view: re-read the database every 5 minutes
