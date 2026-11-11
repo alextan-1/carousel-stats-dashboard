@@ -139,9 +139,9 @@ function renderPosts(rows) {
   const start = (page - 1) * pageSize;
   const shown = list.slice(start, start + pageSize);
   const body = shown.map((p) => {
-    const opts = DATA.versions.filter((v) => v.grp === p.grp).map((v) => `<option value="${v.tag}" ${v.tag === p.version ? "selected" : ""}>${v.name} (${v.vdate})</option>`).join("");
+    const v = DATA.versions.find((x) => x.tag === p.version);
     return `<tr><td>${p.post_date || ""}</td><td><span class="dot" style="--c:${gcolor(p.grp)}"></span>${LABEL[p.grp] || p.grp}</td><td>${esc(p.username)}</td>
-      <td><select data-post="${p.post_id}">${opts}</select></td><td class="muted label" title="${esc(p.label || "")}">${esc(p.label || "")}</td>
+      <td>${esc(v ? v.name : p.version || "")}</td><td class="muted label" title="${esc(p.label || "")}">${esc(p.label || "")}</td>
       <td class="num">${p.published_at ? fmt(p.views) : '<span class="muted">not live</span>'}</td><td class="num">${fmt(p.views_2d)}</td>
       <td class="num">${fmt(p.likes)}</td><td class="num">${fmt(p.saves)}</td><td class="num">${fmt(p.shares)}</td>
       <td>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">open</a>` : ""}</td></tr>`;
@@ -156,14 +156,6 @@ $("posts").addEventListener("click", (e) => {
   const th = e.target.closest("th[data-k]"); if (!th) return;
   const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; page = 1; renderPosts(filtered());
 });
-$("posts").addEventListener("change", async (e) => {
-  const sel = e.target.closest("select[data-post]"); if (!sel) return;
-  const r = await fetch(`/api/posts/${sel.dataset.post}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: sel.value }) });
-  const j = await r.json();
-  if (!r.ok) { toast(j.error || "Couldn't save"); return load(); }
-  const p = DATA.posts.find((x) => x.post_id === sel.dataset.post); p.version = sel.value; toast("Version saved"); render();
-});
-
 $("refresh").addEventListener("click", async () => {
   toast("Refreshing from HumanPost…");
   const r = await fetch("/api/refresh", { method: "POST" }).then((x) => x.json()).catch((e) => ({ error: e.message }));

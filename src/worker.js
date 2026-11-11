@@ -1,6 +1,6 @@
 // Carousel stats dashboard: HumanPost analytics + version tags in one place.
 // - Cron (every 30 min) pulls account status + per-post analytics from HumanPost into D1.
-// - /api/data feeds the dashboard; /api/versions + /api/posts/:id let the team edit tags.
+// - /api/data feeds the dashboard; read-only for viewers; tags come only from the PC ledger.
 // - /api/ingest (Bearer INGEST_TOKEN) lets the PC push the tag ledger (versions.json) and,
 //   if Cloudflare can't reach HumanPost, the analytics snapshots too.
 // The HumanPost key lives only in the HUMANPOST_API_KEY secret; it is never sent to the browser.
@@ -121,7 +121,7 @@ const setMeta = (env, k, v) => env.DB.prepare("INSERT OR REPLACE INTO meta (k, v
 // {analytics: {postId: {summary, history}}, accounts: {username: status}}
 async function ingest(env, body) {
   const now = new Date().toISOString();
-  for (const [tag, v] of Object.entries(body.versions || {})) if (TAG_RE.test(tag)) await upsertVersion(env, tag, v.what || "", true);
+  for (const [tag, v] of Object.entries(body.versions || {})) if (TAG_RE.test(tag)) await upsertVersion(env, tag, v.what || "");
   if (Array.isArray(body.excludeAccounts)) {
     await env.DB.prepare("DELETE FROM exclude_accounts").run();
     if (body.excludeAccounts.length)
@@ -132,8 +132,7 @@ async function ingest(env, body) {
     await env.DB.batch(posts.slice(i, i + 50).map(([pid, p]) =>
       env.DB.prepare(
         `INSERT INTO posts (post_id, version, grp, username, batch, post_date, label, cell) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-         ON CONFLICT(post_id) DO UPDATE SET grp = ?3, username = ?4, batch = ?5, post_date = ?6, label = ?7, cell = ?8,
-         version = CASE WHEN posts.version LIKE '%.base.%' OR ?2 NOT LIKE '%.base.%' THEN ?2 ELSE posts.version END`
+         ON CONFLICT(post_id) DO UPDATE SET grp = ?3, username = ?4, batch = ?5, post_date = ?6, label = ?7, cell = ?8, version = ?2`
       ).bind(pid, p.version, p.group, p.user, p.batch ?? null, p.postDate ?? null, p.label ?? null, p.cell ?? null)));
     for (const [, p] of posts.slice(i, i + 50)) if (TAG_RE.test(p.version)) await upsertVersion(env, p.version, "", true);
   }
@@ -170,21 +169,6 @@ export default {
     try {
       if (p.startsWith("/api/")) await ensureSchema(env);
       if (p === "/api/data" && req.method === "GET") return json(await data(env));
-      if (p === "/api/versions" && req.method === "POST") {
-        const { tag, what } = await req.json();
-        if (!TAG_RE.test(tag || "")) return json({ error: "Tag must look like moms.dimmed.11122026" }, 400);
-        await upsertVersion(env, tag, what || "");
-        return json({ ok: true });
-      }
-      const m = p.match(/^\/api\/posts\/([\w-]+)$/);
-      if (m && req.method === "PATCH") {
-        const { version } = await req.json();
-        if (!TAG_RE.test(version || "")) return json({ error: "Unknown tag format" }, 400);
-        const known = await env.DB.prepare("SELECT tag FROM versions WHERE tag = ?1").bind(version).first();
-        if (!known) return json({ error: "Unknown version. Register it on the PC with hp-versions.py add first" }, 400);
-        await env.DB.prepare("UPDATE posts SET version = ?2 WHERE post_id = ?1").bind(m[1], version).run();
-        return json({ ok: true });
-      }
       if (p === "/api/ingest" && req.method === "POST") {
         if (!env.INGEST_TOKEN || req.headers.get("authorization") !== `Bearer ${env.INGEST_TOKEN}`) return json({ error: "unauthorized" }, 401);
         return json(await ingest(env, await req.json()));
