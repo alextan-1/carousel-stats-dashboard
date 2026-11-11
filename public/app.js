@@ -1,0 +1,190 @@
+// Carousel Stats dashboard front end. Data comes from /api/data (the Worker); no keys here.
+const GROUPS = ["moms", "streamers", "truckers", "vets"];
+const LABEL = { moms: "Moms", streamers: "Streamers", truckers: "Truckers", vets: "Vets" };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const gcolor = (g) => css(`--g-${g}`);
+const fmt = (n) => (n == null || n === "" || Number.isNaN(n) ? "–" : Math.round(n).toLocaleString("en-US"));
+const fmt1 = (n) => (n == null || Number.isNaN(n) ? "–" : n.toFixed(1));
+const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const $ = (id) => document.getElementById(id);
+let DATA = null, pie = null, bars = null, sortKey = "post_date", sortDir = -1, showAll = false;
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2500); }
+
+async function load() {
+  try {
+    const r = await fetch("/api/data", { cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    DATA = await r.json();
+    render();
+  } catch (e) { $("updated").textContent = `Couldn't load data (${e.message}).`; }
+}
+
+// Only active or archived accounts count; warming accounts are left out unless the box is ticked.
+function counted(p) {
+  if ($("f-warming").checked) return true;
+  if (DATA.excludeAccounts.includes(p.username)) return false;
+  const a = DATA.accounts.find((x) => x.username === p.username);
+  return !a || a.status === "active";
+}
+
+function filtered() {
+  const g = $("f-group").value, from = $("f-from").value, to = $("f-to").value;
+  return DATA.posts.filter((p) => counted(p) && (!g || p.grp === g) && (!from || (p.post_date || "") >= from) && (!to || (p.post_date || "") <= to));
+}
+
+function summarize(rows) {
+  const live = rows.filter((p) => p.published_at);
+  const views = live.map((p) => p.views || 0), total = views.reduce((s, v) => s + v, 0);
+  const v2 = live.map((p) => p.views_2d).filter((v) => v != null);
+  const per1k = (k) => (total ? (1000 * live.reduce((s, p) => s + (p[k] || 0), 0)) / total : null);
+  return { posts: rows.length, live: live.length, accounts: new Set(live.map((p) => p.username)).size, total,
+           median2d: median(v2), n2d: v2.length, likes: per1k("likes"), saves: per1k("saves"), shares: per1k("shares") };
+}
+
+function render() {
+  const m = DATA.meta || {};
+  $("updated").textContent = m.last_pull
+    ? `Last pulled ${new Date(m.last_pull).toLocaleString()} (${m.last_pull_source === "pc" ? "from the PC" : "automatic"}). HumanPost refreshes views about once a day.`
+    : "No stats pulled yet.";
+  const rows = filtered();
+  renderTiles(rows); renderPie(rows); renderVersions(rows); renderBars(rows); renderPosts(rows);
+}
+
+function renderTiles(rows) {
+  const all = summarize(rows);
+  $("tiles").innerHTML = GROUPS.filter((g) => !$("f-group").value || $("f-group").value === g).map((g) => {
+    const s = summarize(rows.filter((p) => p.grp === g));
+    const share = all.total ? Math.round((100 * s.total) / all.total) : 0;
+    return `<div class="tile" style="--c:${gcolor(g)}"><div class="name">${LABEL[g]}</div>
+      <p class="big">${fmt(s.median2d)}</p><div class="small">median views at 2 days</div>
+      <div class="small">${fmt(s.total)} views (${share}%) · ${s.live} live posts</div></div>`;
+  }).join("");
+}
+
+function renderPie(rows) {
+  const per = GROUPS.map((g) => ({ g, v: summarize(rows.filter((p) => p.grp === g)).total })).filter((x) => x.v > 0);
+  const total = per.reduce((s, x) => s + x.v, 0);
+  const cfg = {
+    type: "doughnut",
+    data: { labels: per.map((x) => `${LABEL[x.g]} ${total ? ((100 * x.v) / total).toFixed(1) : 0}%`),
+            datasets: [{ data: per.map((x) => x.v), backgroundColor: per.map((x) => gcolor(x.g)), borderColor: css("--surface"), borderWidth: 2 }] },
+    options: { maintainAspectRatio: false, cutout: "55%",
+      plugins: { legend: { position: "right", labels: { color: css("--ink"), boxWidth: 12, padding: 14 } },
+                 tooltip: { callbacks: { label: (c) => ` ${fmt(c.raw)} views` } } } },
+  };
+  if (pie) pie.destroy();
+  pie = new Chart($("pie"), cfg);
+}
+
+function versionRows(rows) {
+  const out = [];
+  for (const g of GROUPS) {
+    const gv = DATA.versions.filter((v) => v.grp === g);
+    if (!gv.length || ($("f-group").value && $("f-group").value !== g)) continue;
+    const base = gv.find((v) => v.name === `${g}.base`);
+    const baseMed = base ? summarize(rows.filter((p) => p.version === base.tag)).median2d : null;
+    for (const v of gv) {
+      const s = summarize(rows.filter((p) => p.version === v.tag));
+      out.push({ g, v, s, vsBase: v === base || !baseMed || s.median2d == null ? null : s.median2d / baseMed });
+    }
+    out.push({ g, total: true, s: summarize(rows.filter((p) => p.grp === g)) });
+  }
+  return out;
+}
+
+function renderVersions(rows) {
+  const vr = versionRows(rows);
+  const head = `<tr><th>Version</th><th>Version date</th><th>What it is</th><th class="num">Live posts</th><th class="num">Accounts</th>
+    <th class="num">Total views</th><th class="num">Median views at 2 days</th><th class="num">vs base</th><th class="num">Likes / saves / shares per 1K</th></tr>`;
+  const body = vr.map((r) => {
+    const s = r.s, rate = s.total ? `${fmt1(s.likes)} / ${fmt1(s.saves)} / ${fmt1(s.shares)}` : "–";
+    if (r.total) return `<tr class="total"><td><span class="dot" style="--c:${gcolor(r.g)}"></span>${LABEL[r.g]} total</td><td></td><td>All ${LABEL[r.g].toLowerCase()} versions</td>
+      <td class="num">${s.live}</td><td class="num">${s.accounts}</td><td class="num">${fmt(s.total)}</td><td class="num">${fmt(s.median2d)}</td><td></td><td class="num">${rate}</td></tr>`;
+    const d = r.v.vdate, date = d.length === 8 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d;
+    const vs = r.vsBase == null ? "" : `<span class="${r.vsBase >= 1.5 ? "win" : r.vsBase < 1 ? "lose" : ""}">${r.vsBase.toFixed(2)}×</span>`;
+    return `<tr><td><span class="dot" style="--c:${gcolor(r.g)}"></span>${r.v.name}</td><td>${date}</td><td class="what">${esc(r.v.what || "")}</td>
+      <td class="num">${s.live}</td><td class="num">${s.live ? s.accounts : ""}</td><td class="num">${s.live ? fmt(s.total) : ""}</td>
+      <td class="num">${s.live ? fmt(s.median2d) : '<span class="muted">no data yet</span>'}</td><td class="num">${vs}</td><td class="num">${s.live ? rate : ""}</td></tr>`;
+  }).join("");
+  $("versions").innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+}
+
+function renderBars(rows) {
+  const vr = versionRows(rows).filter((r) => !r.total && r.s.median2d != null);
+  const cfg = {
+    type: "bar",
+    data: { labels: vr.map((r) => r.v.name), datasets: [{ data: vr.map((r) => r.s.median2d), backgroundColor: vr.map((r) => gcolor(r.g)),
+            borderRadius: 4, barThickness: 18 }] },
+    options: { indexAxis: "y", maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${fmt(c.raw)} median views at 2 days (${vr[c.dataIndex].s.n2d} posts)` } } },
+      scales: { x: { beginAtZero: true, grid: { color: css("--grid") }, ticks: { color: css("--ink-2") } },
+                y: { grid: { display: false }, ticks: { color: css("--ink") } } } },
+  };
+  if (bars) bars.destroy();
+  bars = new Chart($("bars"), cfg);
+}
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+function renderPosts(rows) {
+  const q = $("f-search").value.toLowerCase();
+  const list = rows.filter((p) => !q || [p.username, p.label, p.version, p.batch].join(" ").toLowerCase().includes(q))
+    .sort((a, b) => { const x = a[sortKey] ?? "", y = b[sortKey] ?? ""; return (x > y ? 1 : x < y ? -1 : 0) * sortDir; });
+  const cols = [["post_date", "Batch date"], ["grp", "Group"], ["username", "Account"], ["version", "Version"], ["label", "Label"],
+    ["views", "Views", 1], ["views_2d", "Views at 2 days", 1], ["likes", "Likes", 1], ["saves", "Saves", 1], ["shares", "Shares", 1]];
+  const head = cols.map(([k, t, n]) => `<th data-k="${k}" class="${n ? "num" : ""}">${t}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "<th>Link</th>";
+  const shown = showAll ? list : list.slice(0, 50);
+  const body = shown.map((p) => {
+    const opts = DATA.versions.filter((v) => v.grp === p.grp).map((v) => `<option value="${v.tag}" ${v.tag === p.version ? "selected" : ""}>${v.name} (${v.vdate})</option>`).join("");
+    return `<tr><td>${p.post_date || ""}</td><td><span class="dot" style="--c:${gcolor(p.grp)}"></span>${LABEL[p.grp] || p.grp}</td><td>${esc(p.username)}</td>
+      <td><select data-post="${p.post_id}">${opts}</select></td><td class="muted label" title="${esc(p.label || "")}">${esc(p.label || "")}</td>
+      <td class="num">${p.published_at ? fmt(p.views) : '<span class="muted">not live</span>'}</td><td class="num">${fmt(p.views_2d)}</td>
+      <td class="num">${fmt(p.likes)}</td><td class="num">${fmt(p.saves)}</td><td class="num">${fmt(p.shares)}</td>
+      <td>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">open</a>` : ""}</td></tr>`;
+  }).join("");
+  $("posts").innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+  $("more").hidden = list.length <= 50;
+  $("more").textContent = showAll ? "Show first 50" : `Show all ${list.length} posts`;
+}
+
+$("posts").addEventListener("click", (e) => {
+  const th = e.target.closest("th[data-k]"); if (!th) return;
+  const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : -1; sortKey = k; renderPosts(filtered());
+});
+$("posts").addEventListener("change", async (e) => {
+  const sel = e.target.closest("select[data-post]"); if (!sel) return;
+  const r = await fetch(`/api/posts/${sel.dataset.post}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ version: sel.value }) });
+  const j = await r.json();
+  if (!r.ok) { toast(j.error || "Couldn't save"); return load(); }
+  const p = DATA.posts.find((x) => x.post_id === sel.dataset.post); p.version = sel.value; toast("Version saved"); render();
+});
+
+// Add version form
+function tagPreview() {
+  const d = $("v-date").value, v = $("v-variant").value.trim().toLowerCase();
+  const tag = d && v ? `${$("v-group").value}.${v}.${d.slice(5, 7)}${d.slice(8, 10)}${d.slice(0, 4)}` : "";
+  $("v-preview").textContent = tag ? `New tag: ${tag}` : "";
+  return tag;
+}
+["v-group", "v-variant", "v-date"].forEach((id) => $(id).addEventListener("input", tagPreview));
+$("add-version").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const tag = tagPreview();
+  const r = await fetch("/api/versions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tag, what: $("v-what").value }) });
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || "Couldn't add");
+  toast(`Added ${tag}`); e.target.reset(); $("v-preview").textContent = ""; load();
+});
+
+$("refresh").addEventListener("click", async () => {
+  await fetch("/api/refresh", { method: "POST" }); toast("Refresh started. New numbers in about a minute."); setTimeout(load, 60000);
+});
+["f-group", "f-from", "f-to", "f-warming"].forEach((id) => $(id).addEventListener("change", render));
+$("more").addEventListener("click", () => { showAll = !showAll; renderPosts(filtered()); });
+$("f-search").addEventListener("input", () => renderPosts(filtered()));
+
+for (const g of GROUPS) { $("f-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); $("v-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); }
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+load();
+setInterval(load, 5 * 60 * 1000); // live view: re-read the database every 5 minutes

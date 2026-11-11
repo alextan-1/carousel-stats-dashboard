@@ -1,0 +1,11 @@
+{
+  "name": "carousel-stats-dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute carousel-stats --remote --file=schema.sql",
+    "db:init:local": "wrangler d1 execute carousel-stats --local --file=schema.sql"
+  },
+  "devDependencies": { "wrangler": "4.160.1" }
+}

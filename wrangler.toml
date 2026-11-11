@@ -1,0 +1,22 @@
+name = "carousel-stats-dashboard"
+main = "src/worker.js"
+compatibility_date = "2026-10-01"
+
+# Static dashboard (public/) served by the same Worker
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+# Pull HumanPost every 30 minutes (views only change ~once a day; post status changes more often)
+[triggers]
+crons = ["*/30 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "carousel-stats"
+database_id = "REPLACE_WITH_D1_ID"   # from: npx wrangler d1 create carousel-stats
+
+# Secrets (never in this file):
+#   npx wrangler secret put HUMANPOST_API_KEY   -> the key from humanpost.env
+#   npx wrangler secret put INGEST_TOKEN        -> any long random string; the PC uses it to push tags

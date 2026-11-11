@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carousel Stats</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Carousel Stats</h1>
+    <p class="sub" id="updated">Loading…</p>
+  </div>
+  <button id="refresh" type="button">Refresh from HumanPost</button>
+</header>
+
+<section class="filters" aria-label="Filters">
+  <label>Group <select id="f-group"><option value="">All groups</option></select></label>
+  <label>Posted from <input type="date" id="f-from"></label>
+  <label>to <input type="date" id="f-to"></label>
+  <label class="check"><input type="checkbox" id="f-warming"> Include warming accounts</label>
+</section>
+
+<section class="tiles" id="tiles" aria-label="Group totals"></section>
+
+<section class="grid2">
+  <div class="card">
+    <h2>Share of total views by group</h2>
+    <div class="chart-wrap"><canvas id="pie" aria-label="Share of total views by group" role="img"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>Median views at 2 days, by version</h2>
+    <div class="chart-wrap tall"><canvas id="bars" aria-label="Median views at 2 days by version" role="img"></canvas></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Versions</h2>
+  <p class="hint">"vs base" compares each version's median views at 2 days with its group's base. Kelvin's rule: a version wins at 1.5× or more.</p>
+  <div class="table-wrap"><table id="versions"></table></div>
+</section>
+
+<section class="card">
+  <div class="row">
+    <h2>Posts</h2>
+    <input type="search" id="f-search" placeholder="Search account, label, version">
+  </div>
+  <p class="hint">Change a post's version from the dropdown. Click a column header to sort.</p>
+  <div class="table-wrap"><table id="posts"></table></div>
+  <button type="button" id="more" class="more" hidden></button>
+</section>
+
+<section class="card">
+  <h2>Add a version</h2>
+  <form id="add-version" class="row">
+    <label>Group <select id="v-group"></select></label>
+    <label>Variant <input id="v-variant" placeholder="dimmed" pattern="[a-z0-9-]+" required></label>
+    <label>Start date <input type="date" id="v-date" required></label>
+    <label class="grow">What changed <input id="v-what" placeholder="Darker, less bright photos"></label>
+    <button type="submit">Add</button>
+  </form>
+  <p class="hint" id="v-preview"></p>
+</section>
+
+<p class="toast" id="toast" role="status"></p>
+<script src="app.js"></script>
+</body>
+</html>
