@@ -160,23 +160,6 @@ $("posts").addEventListener("change", async (e) => {
   const p = DATA.posts.find((x) => x.post_id === sel.dataset.post); p.version = sel.value; toast("Version saved"); render();
 });
 
-// Add version form
-function tagPreview() {
-  const d = $("v-date").value, v = $("v-variant").value.trim().toLowerCase();
-  const tag = d && v ? `${$("v-group").value}.${v}.${d.slice(5, 7)}${d.slice(8, 10)}${d.slice(0, 4)}` : "";
-  $("v-preview").textContent = tag ? `New tag: ${tag}` : "";
-  return tag;
-}
-["v-group", "v-variant", "v-date"].forEach((id) => $(id).addEventListener("input", tagPreview));
-$("add-version").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const tag = tagPreview();
-  const r = await fetch("/api/versions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tag, what: $("v-what").value }) });
-  const j = await r.json();
-  if (!r.ok) return toast(j.error || "Couldn't add");
-  toast(`Added ${tag}`); e.target.reset(); $("v-preview").textContent = ""; load();
-});
-
 $("refresh").addEventListener("click", async () => {
   toast("Refreshing from HumanPost…");
   const r = await fetch("/api/refresh", { method: "POST" }).then((x) => x.json()).catch((e) => ({ error: e.message }));
@@ -186,7 +169,7 @@ $("refresh").addEventListener("click", async () => {
 $("more").addEventListener("click", () => { showAll = !showAll; renderPosts(filtered()); });
 $("f-search").addEventListener("input", () => renderPosts(filtered()));
 
-for (const g of GROUPS) { $("f-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); $("v-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); }
+for (const g of GROUPS) { $("f-group").insertAdjacentHTML("beforeend", `<option value="${g}">${LABEL[g]}</option>`); }
 const darkMQ = window.matchMedia("(prefers-color-scheme: dark)");
 const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : darkMQ.matches;
 $("theme-toggle").checked = isDark();

@@ -181,7 +181,7 @@ export default {
         const { version } = await req.json();
         if (!TAG_RE.test(version || "")) return json({ error: "Unknown tag format" }, 400);
         const known = await env.DB.prepare("SELECT tag FROM versions WHERE tag = ?1").bind(version).first();
-        if (!known) return json({ error: "Add the version first" }, 400);
+        if (!known) return json({ error: "Unknown version. Register it on the PC with hp-versions.py add first" }, 400);
         await env.DB.prepare("UPDATE posts SET version = ?2 WHERE post_id = ?1").bind(m[1], version).run();
         return json({ ok: true });
       }

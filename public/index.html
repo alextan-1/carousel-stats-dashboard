@@ -63,18 +63,6 @@
   <button type="button" id="more" class="more" hidden></button>
 </section>
 
-<section class="card">
-  <h2>Add a version</h2>
-  <form id="add-version" class="row">
-    <label>Group <select id="v-group"></select></label>
-    <label>Variant <input id="v-variant" placeholder="dimmed" pattern="[a-z0-9-]+" required></label>
-    <label>Start date <input type="date" id="v-date" required></label>
-    <label class="grow">What changed <input id="v-what" placeholder="Darker, less bright photos"></label>
-    <button type="submit">Add</button>
-  </form>
-  <p class="hint" id="v-preview"></p>
-</section>
-
 <p class="toast" id="toast" role="status"></p>
 <script src="app.js"></script>
 </body>
