@@ -189,6 +189,11 @@ export default {
         if (!env.INGEST_TOKEN || req.headers.get("authorization") !== `Bearer ${env.INGEST_TOKEN}`) return json({ error: "unauthorized" }, 401);
         return json(await ingest(env, await req.json()));
       }
+      if (p === "/api/health") {
+        // Names only, never values: which bindings this deployment can see.
+        return json({ hasHumanpostKey: !!env.HUMANPOST_API_KEY, hasIngestToken: !!env.INGEST_TOKEN, hasDB: !!env.DB,
+          envNames: Object.keys(env).sort() });
+      }
       if (p === "/api/refresh" && req.method === "POST") {
         return json(await pull(env)); // returns counts, or why it couldn't reach HumanPost
       }
