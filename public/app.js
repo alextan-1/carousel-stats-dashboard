@@ -7,7 +7,7 @@ const fmt = (n) => (n == null || n === "" || Number.isNaN(n) ? "–" : Math.roun
 const fmt1 = (n) => (n == null || Number.isNaN(n) ? "–" : n.toFixed(1));
 const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const $ = (id) => document.getElementById(id);
-let DATA = null, pie = null, bars = null, sortKey = "post_date", sortDir = -1, page = 1, pageSize = 15;
+let DATA = null, pie = null, bars = null, sortKey = "views", sortDir = -1, page = 1, pageSize = 15;
 
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2500); }
 
@@ -131,7 +131,11 @@ const LINK_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" s
 function renderPosts(rows) {
   const q = $("f-search").value.toLowerCase();
   const list = rows.filter((p) => !q || [p.username, p.label, p.version, p.batch].join(" ").toLowerCase().includes(q))
-    .sort((a, b) => { const x = a[sortKey] ?? "", y = b[sortKey] ?? ""; return (x > y ? 1 : x < y ? -1 : 0) * sortDir; });
+    .sort((a, b) => {
+      const x = a[sortKey], y = b[sortKey];
+      if (x == null || y == null) return x == null && y == null ? 0 : x == null ? 1 : -1; // blanks always last
+      return (x > y ? 1 : x < y ? -1 : 0) * sortDir;
+    });
   const cols = [["post_date", "Batch date"], ["grp", "Group"], ["username", "Account"], ["version", "Version"], ["label", "Label"],
     ["views", "Views", 1], ["views_2d", "Views at 2 days", 1], ["likes", "Likes", 1], ["saves", "Saves", 1], ["shares", "Shares", 1]];
   const head = cols.map(([k, t, n]) => `<th data-k="${k}" class="${n ? "num" : ""}">${t}${sortKey === k ? (sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "<th>Link</th>";
