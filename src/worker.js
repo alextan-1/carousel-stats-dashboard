@@ -82,7 +82,7 @@ async function storeAnalytics(env, postId, body, now) {
 }
 
 async function pull(env) {
-  if (!env.HUMANPOST_API_KEY) return { skipped: "no HUMANPOST_API_KEY secret" };
+  if (!env.HUMANPOST_API_KEY) { await setMeta(env, "last_error", "HUMANPOST_API_KEY secret is missing"); return { skipped: "no HUMANPOST_API_KEY secret" }; }
   const H = { Authorization: `Bearer ${env.HUMANPOST_API_KEY}` };
   const now = new Date().toISOString();
   const out = { accounts: 0, posts: 0, errors: 0 };
@@ -90,7 +90,7 @@ async function pull(env) {
     const r = await fetch(`${API}/accounts?platform=tiktok`, { headers: H });
     if (!r.ok) throw new Error(`accounts ${r.status}`);
     const acc = (await r.json()).data || [];
-    await env.DB.batch(acc.map((a) =>
+    if (acc.length) await env.DB.batch(acc.map((a) =>
       env.DB.prepare("INSERT OR REPLACE INTO accounts (username, status, platform, seen_at) VALUES (?1, ?2, ?3, ?4)")
         .bind(a.username, a.status ?? null, a.platform ?? "tiktok", now)));
     out.accounts = acc.length;
@@ -190,8 +190,7 @@ export default {
         return json(await ingest(env, await req.json()));
       }
       if (p === "/api/refresh" && req.method === "POST") {
-        ctx.waitUntil(pull(env));
-        return json({ ok: true, note: "Refresh started; reload in a minute." });
+        return json(await pull(env)); // returns counts, or why it couldn't reach HumanPost
       }
       if (p.startsWith("/api/")) return json({ error: "not found" }, 404);
       return env.ASSETS.fetch(req);

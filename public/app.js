@@ -178,7 +178,9 @@ $("add-version").addEventListener("submit", async (e) => {
 });
 
 $("refresh").addEventListener("click", async () => {
-  await fetch("/api/refresh", { method: "POST" }); toast("Refresh started. New numbers in about a minute."); setTimeout(load, 60000);
+  toast("Refreshing from HumanPost…");
+  const r = await fetch("/api/refresh", { method: "POST" }).then((x) => x.json()).catch((e) => ({ error: e.message }));
+  toast(r.error || r.skipped ? `Couldn't refresh: ${r.error || r.skipped}` : `Updated ${r.posts} posts`); load();
 });
 ["f-group", "f-from", "f-to", "f-warming"].forEach((id) => $(id).addEventListener("change", render));
 $("more").addEventListener("click", () => { showAll = !showAll; renderPosts(filtered()); });
