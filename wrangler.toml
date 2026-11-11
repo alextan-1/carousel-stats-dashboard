@@ -21,7 +21,7 @@ fallthrough = true
 [[d1_databases]]
 binding = "DB"
 database_name = "carousel-stats"
-database_id = "REPLACE_WITH_D1_ID"   # Cloudflare > Storage & Databases > D1 > carousel-stats > Database ID
+database_id = "e56f1834-7013-46c1-bda9-a7ffedf5fc4d"   # Cloudflare > Storage & Databases > D1 > carousel-stats > Database ID
 
 # Secrets (never in this file):
 #   npx wrangler secret put HUMANPOST_API_KEY   -> the key from humanpost.env
